@@ -124,7 +124,7 @@ export default function Register() {
 
                     {/* Footer Info */}
                     <div className="text-center mt-8">
-                        <p className="text-xs text-gray-300">2026 System Build  Version 1.1.0</p>
+                        <p className="text-xs text-gray-300">2026 System Build  Version 1.2.0</p>
                     </div>
                 </motion.div>
             </main>

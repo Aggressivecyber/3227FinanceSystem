@@ -51,8 +51,9 @@ const uploadMiddleware = multer({
     storage: storageConfig,
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit per file
     fileFilter: function (req, file, cb) {
-        // Accept images only
-        const allowedTypes = /jpeg|jpg|png|gif|pdf/;
+        // Accept common images + PDF
+        // Note: some phones upload HEIC/HEIF; some browsers produce WEBP.
+        const allowedTypes = /jpeg|jpg|png|gif|webp|heic|heif|pdf/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
         const mimetype = allowedTypes.test(file.mimetype);
 
@@ -64,7 +65,17 @@ const uploadMiddleware = multer({
 });
 
 // Routes
-router.post('/submit', authenticateToken, uploadMiddleware.array('invoices', 10), reimbursementController.createRequest);
+router.post(
+    '/submit',
+    authenticateToken,
+    (req, res, next) => {
+        uploadMiddleware.array('invoices', 10)(req, res, (err) => {
+            if (!err) return next();
+            return res.status(400).json({ error: err.message || '文件上传失败' });
+        });
+    },
+    reimbursementController.createRequest
+);
 router.get('/funds', authenticateToken, reimbursementController.getFunds);
 router.get('/my', authenticateToken, reimbursementController.getMyHistory);
 router.get('/history', authenticateToken, reimbursementController.getMyHistory);

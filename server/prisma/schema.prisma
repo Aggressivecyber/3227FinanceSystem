@@ -15,6 +15,7 @@ model User {
   username       String          @unique
   password       String
   role           String          @default("USER") // "USER" or "ADMIN"
+  isDeleted      Boolean         @default(false)
   reimbursements Reimbursement[]
 }
 

@@ -138,3 +138,53 @@ exports.updateRequestStatus = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 };
+
+// List all users (including soft-deleted)
+exports.listUsers = async (req, res) => {
+    try {
+        const users = await prisma.user.findMany({
+            orderBy: { id: 'asc' },
+            select: {
+                id: true,
+                username: true,
+                role: true,
+                isDeleted: true
+            }
+        });
+
+        res.json(users);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+// Soft delete a user (do NOT delete reimbursements/uploads)
+exports.deleteUser = async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid user id' });
+
+        // Prevent deleting self and any admin accounts
+        if (req.user?.userId === id) return res.status(400).json({ error: 'Cannot delete current user' });
+
+        const user = await prisma.user.findUnique({
+            where: { id },
+            select: { id: true, role: true, isDeleted: true }
+        });
+
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (user.role === 'ADMIN') return res.status(400).json({ error: 'Cannot delete admin user' });
+        if (user.isDeleted) return res.json({ message: 'User already deleted' });
+
+        await prisma.user.update({
+            where: { id },
+            data: { isDeleted: true }
+        });
+
+        res.json({ message: 'User deleted' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};

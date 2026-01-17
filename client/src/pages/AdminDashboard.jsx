@@ -28,6 +28,7 @@ export default function AdminDashboard() {
         };
     const [requests, setRequests] = useState([]);
     const [funds, setFunds] = useState(0);
+    const [users, setUsers] = useState([]);
     const [isEditingFunds, setIsEditingFunds] = useState(false);
     const [newFunds, setNewFunds] = useState('');
 
@@ -77,9 +78,41 @@ export default function AdminDashboard() {
         }
     };
 
+    const fetchUsers = async () => {
+        try {
+            const res = await api.get('/admin/users');
+            setUsers(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     useEffect(() => {
         fetchData();
+        fetchUsers();
     }, []);
+
+    const handleDeleteUser = async (user) => {
+        if (!user?.id) return;
+        if (user.role === 'ADMIN') {
+            alert('不能删除管理员账号');
+            return;
+        }
+        if (user.isDeleted) {
+            alert('该账号已删除');
+            return;
+        }
+
+        const ok = window.confirm(`确认删除账号：${user.username} (ID: ${user.id})？\n\n说明：删除后该用户将无法登录，但历史报销记录和上传文件不会删除。`);
+        if (!ok) return;
+
+        try {
+            await api.delete(`/admin/users/${user.id}`);
+            fetchUsers();
+        } catch (err) {
+            alert(err.response?.data?.error || '删除失败');
+        }
+    };
 
     const handleUpdateStatus = async (id, status) => {
         try {
@@ -323,6 +356,81 @@ export default function AdminDashboard() {
                                                 <p className="text-xs opacity-50">Queue is empty</p>
                                             </div>
                                         </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </motion.div>
+
+            {/* Users Section */}
+            <motion.div variants={itemVariants} className="bg-white p-8 rounded-[2.5rem] shadow-bento border border-gray-100">
+                <div className="flex items-center justify-between mb-6 px-2">
+                    <div className="flex items-center gap-3">
+                        <span className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500">
+                            <Users className="w-6 h-6" />
+                        </span>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900">账户管理</h2>
+                            <p className="text-[10px] text-gray-300 uppercase tracking-widest">Accounts</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="overflow-auto">
+                    <table className="w-full text-left border-separate border-spacing-y-2">
+                        <thead className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                            <tr>
+                                <th className="px-4 py-3 pl-6">ID</th>
+                                <th className="px-4 py-3">用户名</th>
+                                <th className="px-4 py-3">角色</th>
+                                <th className="px-4 py-3">状态</th>
+                                <th className="px-4 py-3 text-right pr-6">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {users.map((u) => (
+                                <tr key={u.id} className="bg-gray-50/50 hover:bg-white hover:shadow-lg hover:shadow-gray-200/50 transition-all group duration-300 transform hover:-translate-y-1">
+                                    <td className="px-4 py-5 pl-6 rounded-l-2xl border border-transparent group-hover:border-gray-100 group-hover:border-r-transparent font-mono font-bold text-gray-900">
+                                        {u.id}
+                                    </td>
+                                    <td className="px-4 py-5 border-y border-transparent group-hover:border-gray-100 font-bold text-gray-900">
+                                        {u.username}
+                                    </td>
+                                    <td className="px-4 py-5 border-y border-transparent group-hover:border-gray-100 text-sm font-bold text-gray-500">
+                                        {u.role}
+                                    </td>
+                                    <td className="px-4 py-5 border-y border-transparent group-hover:border-gray-100">
+                                        {u.isDeleted ? (
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border text-gray-500 bg-gray-50 border-gray-200">
+                                                已删除
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border text-green-600 bg-green-50 border-green-200">
+                                                正常
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-5 rounded-r-2xl border border-transparent group-hover:border-gray-100 group-hover:border-l-transparent text-right pr-6">
+                                        <button
+                                            disabled={u.role === 'ADMIN' || u.isDeleted}
+                                            onClick={() => handleDeleteUser(u)}
+                                            className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${
+                                                (u.role === 'ADMIN' || u.isDeleted)
+                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                    : 'bg-red-50 text-red-600 hover:bg-red-100'
+                                            }`}
+                                        >
+                                            删除
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {users.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-10 text-center text-sm font-bold text-gray-400">
+                                        暂无用户数据
                                     </td>
                                 </tr>
                             )}

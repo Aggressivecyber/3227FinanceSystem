@@ -21,13 +21,31 @@ exports.register = async (req, res) => {
         // Check if user exists
         // Enforce case-insensitive uniqueness (SQLite unique is case-sensitive by default)
         const existingUser = await prisma.$queryRaw`
-            SELECT id, username FROM User
+            SELECT id, username, isDeleted FROM User
             WHERE LOWER(username) = LOWER(${username})
             LIMIT 1;
         `;
 
+        // If user exists and is active, block duplicate register
         if (Array.isArray(existingUser) && existingUser.length > 0) {
-            return res.status(400).json({ error: 'Username already exists' });
+            const row = existingUser[0];
+            if (!row?.isDeleted) {
+                return res.status(400).json({ error: 'Username already exists' });
+            }
+
+            // If user exists but was soft-deleted, restore it instead of creating a new row.
+            const hashedPassword = await bcrypt.hash(password, 10);
+            await prisma.user.update({
+                where: { id: row.id },
+                data: {
+                    username,
+                    password: hashedPassword,
+                    role: 'USER',
+                    isDeleted: false
+                }
+            });
+
+            return res.status(201).json({ message: 'User created' });
         }
 
         // Hash password
@@ -61,11 +79,16 @@ exports.login = async (req, res) => {
         if (!username) return res.status(400).json({ error: '用户名不能为空' });
         if (!password) return res.status(400).json({ error: '密码不能为空' });
 
-        const user = await prisma.user.findUnique({
-            where: { username }
-        });
+        const rows = await prisma.$queryRaw`
+            SELECT id, username, password, role, isDeleted FROM User
+            WHERE LOWER(username) = LOWER(${username})
+            LIMIT 1;
+        `;
+
+        const user = Array.isArray(rows) ? rows[0] : null;
 
         if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+        if (user.isDeleted) return res.status(401).json({ error: 'Account disabled' });
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
