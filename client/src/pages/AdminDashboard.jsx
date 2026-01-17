@@ -257,15 +257,32 @@ export default function AdminDashboard() {
                                     </td>
                                     <td className="px-4 py-5 border-y border-transparent group-hover:border-gray-100">
                                         {(() => {
-                                            const first = (Array.isArray(req.invoiceUrls) && req.invoiceUrls.length > 0)
-                                                ? req.invoiceUrls[0]
-                                                : req.invoiceUrl;
-                                            const href = toInvoiceHref(first);
-                                            if (!href) return <span className="text-gray-300 text-xs font-bold">无</span>;
+                                            const urls = Array.isArray(req.invoiceUrls) && req.invoiceUrls.length > 0
+                                                ? req.invoiceUrls
+                                                : (req.invoiceUrl ? [req.invoiceUrl] : []);
+
+                                            const hrefs = urls
+                                                .map(toInvoiceHref)
+                                                .filter(Boolean);
+
+                                            if (hrefs.length === 0) return <span className="text-gray-300 text-xs font-bold">无</span>;
+
+                                            if (hrefs.length === 1) {
+                                                return (
+                                                    <a href={hrefs[0]} target="_blank" rel="noreferrer" className="text-xs font-bold text-xjtu-red hover:underline flex items-center gap-1">
+                                                        查看文件
+                                                    </a>
+                                                );
+                                            }
+
                                             return (
-                                                <a href={href} target="_blank" rel="noreferrer" className="text-xs font-bold text-xjtu-red hover:underline flex items-center gap-1">
-                                                    查看文件
-                                                </a>
+                                                <div className="flex flex-col gap-1">
+                                                    {hrefs.map((href, idx) => (
+                                                        <a key={href + idx} href={href} target="_blank" rel="noreferrer" className="text-xs font-bold text-xjtu-red hover:underline flex items-center gap-1">
+                                                            查看文件{idx + 1}
+                                                        </a>
+                                                    ))}
+                                                </div>
                                             );
                                         })()}
                                     </td>
