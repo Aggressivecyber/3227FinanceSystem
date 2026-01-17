@@ -65,6 +65,7 @@ const uploadMiddleware = multer({
 
 // Routes
 router.post('/submit', authenticateToken, uploadMiddleware.array('invoices', 10), reimbursementController.createRequest);
+router.get('/funds', authenticateToken, reimbursementController.getFunds);
 router.get('/my', authenticateToken, reimbursementController.getMyHistory);
 router.get('/history', authenticateToken, reimbursementController.getMyHistory);
 router.post('/withdraw/:id', authenticateToken, reimbursementController.withdrawRequest);

@@ -10,8 +10,19 @@ const itemVariants = {
 
 export default function UserDashboard() {
     const [requests, setRequests] = useState([]);
+    const [totalFunds, setTotalFunds] = useState(null);
     const [formData, setFormData] = useState({ amount: '', purpose: '', invoices: [] });
     const [uploading, setUploading] = useState(false);
+    const [invoiceError, setInvoiceError] = useState('');
+
+    const validateAmount = (value) => {
+        const text = value === undefined || value === null ? '' : String(value).trim();
+        if (!text) return { ok: false, message: '请输入金额' };
+        if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return { ok: false, message: '金额小数位不能超过2位' };
+        const num = Number.parseFloat(text);
+        if (!Number.isFinite(num) || num <= 0) return { ok: false, message: '金额必须大于0' };
+        return { ok: true, value: num };
+    };
 
     const fetchRequests = async () => {
         try {
@@ -22,13 +33,34 @@ export default function UserDashboard() {
         }
     };
 
+    const fetchFunds = async () => {
+        try {
+            const res = await api.get('/reimbursement/funds');
+            setTotalFunds(res.data?.totalFunds ?? 0);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     useEffect(() => {
         fetchRequests();
+        fetchFunds();
     }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (formData.invoices.length === 0) return alert('请上传至少一张发票');
+        if (formData.invoices.length === 0) {
+            setInvoiceError('请上传发票');
+            return;
+        }
+
+        const amountCheck = validateAmount(formData.amount);
+        if (!amountCheck.ok) return alert(amountCheck.message);
+
+        const ok = confirm(
+            `确认提交申请？\n金额：¥${amountCheck.value}\n用途：${(formData.purpose || '').trim() || '（空）'}\n发票：${formData.invoices.length} 个文件`
+        );
+        if (!ok) return;
 
         setUploading(true);
         const data = new FormData();
@@ -97,7 +129,7 @@ export default function UserDashboard() {
                         <p className="text-[10px] uppercase tracking-widest opacity-30">User Dashboard</p>
                         <div className="relative mt-6">
                             <h1 className="text-6xl font-display font-black leading-none tracking-tighter">我的报账</h1>
-                            <p className="text-xl font-light opacity-30 absolute -bottom-1 left-0 tracking-widest">Reimbursement</p>
+                            <p className="mt-2 text-xl font-light opacity-30 tracking-widest">Reimbursement</p>
                         </div>
                     </div>
 
@@ -105,6 +137,11 @@ export default function UserDashboard() {
                         <div>
                             <p className="text-sm opacity-50 uppercase tracking-widest mb-1">总申请</p>
                             <p className="text-5xl font-mono font-bold">{requests.length}</p>
+                        </div>
+
+                        <div>
+                            <p className="text-sm opacity-50 uppercase tracking-widest mb-1">剩余总金额</p>
+                            <p className="text-5xl font-mono font-bold">¥{(totalFunds ?? 0).toLocaleString()}</p>
                         </div>
 
                     </div>
@@ -144,6 +181,8 @@ export default function UserDashboard() {
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold group-focus-within:text-xjtu-red transition-colors">¥</span>
                                 <input
                                     type="number"
+                                    min="0.01"
+                                    step="0.01"
                                     className="w-full bg-gray-50 border-2 border-transparent text-gray-900 font-mono font-bold text-2xl rounded-2xl py-4 pl-10 pr-4 focus:outline-none focus:border-xjtu-red/20 focus:bg-white focus:shadow-[0_0_0_4px_rgba(164,31,53,0.05)] transition-all"
                                     placeholder="0.00"
                                     value={formData.amount}
@@ -180,10 +219,18 @@ export default function UserDashboard() {
                                     className="hidden"
                                     multiple
                                     accept="image/*,.pdf"
-                                    onChange={(e) => setFormData({ ...formData, invoices: Array.from(e.target.files) })}
-                                    required
+                                    onChange={(e) => {
+                                        const files = Array.from(e.target.files || []);
+                                        setFormData({ ...formData, invoices: files });
+                                        if (files.length > 0) setInvoiceError('');
+                                    }}
                                 />
                             </label>
+                            {invoiceError && (
+                                <div className="mt-2 text-xs font-bold text-xjtu-red">
+                                    {invoiceError}
+                                </div>
+                            )}
                             {formData.invoices.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-1">
                                     {formData.invoices.map((file, idx) => (

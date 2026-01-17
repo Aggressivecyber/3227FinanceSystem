@@ -20,9 +20,31 @@ const toPublicUploadUrl = (filePath) => {
     return normalized;
 };
 
+// Read-only: get remaining total funds (for user display)
+exports.getFunds = async (req, res) => {
+    try {
+        const setting = await prisma.systemSettings.findUnique({ where: { key: 'total_funds' } });
+        const funds = setting ? parseFloat(setting.value) : 0;
+        res.json({ totalFunds: funds });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
 exports.createRequest = async (req, res) => {
     try {
         const { amount, purpose } = req.body;
+
+        const amountText = amount === undefined || amount === null ? '' : String(amount).trim();
+        // Allow integers or decimals with up to 2 digits. Reject negatives and more precision.
+        // Examples allowed: 1, 1.2, 1.23, 0.01
+        const amountFormatOk = /^\d+(?:\.\d{1,2})?$/.test(amountText);
+        const amountValue = Number.parseFloat(amountText);
+
+        if (!amountFormatOk || !Number.isFinite(amountValue) || amountValue <= 0) {
+            return res.status(400).json({ error: '金额必须大于0，且小数位不超过2位' });
+        }
 
         // Handle multiple files - req.files is an array
         if (!req.files || req.files.length === 0) {
@@ -36,7 +58,7 @@ exports.createRequest = async (req, res) => {
 
         const reimbursement = await prisma.reimbursement.create({
             data: {
-                amount: parseFloat(amount),
+                amount: amountValue,
                 purpose,
                 invoiceUrl: JSON.stringify(invoiceUrls), // Store as JSON string
                 userId: req.user.userId

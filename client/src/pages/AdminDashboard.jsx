@@ -143,7 +143,7 @@ export default function AdminDashboard() {
                             <h1 className="text-6xl font-display font-bold leading-none tracking-tighter">
                                 财务管理
                             </h1>
-                            <p className="text-xl font-light opacity-20 absolute -bottom-1 left-0 tracking-widest">
+                            <p className="mt-2 text-xl font-light opacity-20 tracking-widest">
                                 Governance
                             </p>
                         </div>

@@ -29,8 +29,8 @@ export default function Layout({ children }) {
                                 <School className="w-5 h-5 text-white" />
                             </div>
                             <div className="flex flex-col">
-                                <h1 className="text-lg font-bold text-gray-900 leading-tight">财务报销系统</h1>
-                                <span className="text-[10px] text-gray-400 uppercase tracking-widest">Finance Management</span>
+                                <h1 className="text-lg font-bold text-gray-900 leading-tight">3227财务报账管理系统</h1>
+                                <span className="text-[10px] text-gray-400 uppercase tracking-widest">3227 Finance Reimbursement</span>
                             </div>
                         </div>
 
