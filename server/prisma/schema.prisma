@@ -1,0 +1,36 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int             @id @default(autoincrement())
+  username       String          @unique
+  password       String
+  role           String          @default("USER") // "USER" or "ADMIN"
+  reimbursements Reimbursement[]
+}
+
+model Reimbursement {
+  id         Int      @id @default(autoincrement())
+  amount     Float
+  purpose    String
+  invoiceUrl String
+  status     String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "WITHDRAWN"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model SystemSettings {
+  key   String @id
+  value String
+}
