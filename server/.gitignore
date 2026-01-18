@@ -4,3 +4,9 @@ node_modules
 /data/*
 /uploads/*
 /generated/prisma
+# Ignore runtime data and uploads
+uploads/
+data/
+prisma/prod.db
+# Excel records (explicit)
+data/*.xlsx
