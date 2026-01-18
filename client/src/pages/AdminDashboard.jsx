@@ -29,8 +29,33 @@ export default function AdminDashboard() {
     const [requests, setRequests] = useState([]);
     const [funds, setFunds] = useState(0);
     const [users, setUsers] = useState([]);
+    const [showProcessedRequests, setShowProcessedRequests] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const [isEditingFunds, setIsEditingFunds] = useState(false);
     const [newFunds, setNewFunds] = useState('');
+
+    const pendingRequests = requests.filter(r => r.status === 'PENDING');
+    const processedRequests = requests.filter(r => r.status !== 'PENDING');
+
+    const normalizedSearch = (searchQuery || '').trim().toLowerCase();
+    const matchRequest = (req) => {
+        if (!normalizedSearch) return true;
+
+        const username = (req?.user?.username || '').toString().toLowerCase();
+        const purpose = (req?.purpose || '').toString().toLowerCase();
+        const idText = (req?.id ?? '').toString().toLowerCase();
+        const amountText = (req?.amount ?? '').toString().toLowerCase();
+
+        return (
+            username.includes(normalizedSearch) ||
+            purpose.includes(normalizedSearch) ||
+            idText.includes(normalizedSearch) ||
+            amountText.includes(normalizedSearch)
+        );
+    };
+
+    const pendingRequestsFiltered = pendingRequests.filter(matchRequest);
+    const processedRequestsFiltered = processedRequests.filter(matchRequest);
 
     // Password change state
     const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -189,7 +214,7 @@ export default function AdminDashboard() {
                         </div>
                         <div>
                             <p className="text-xs opacity-40 uppercase tracking-widest mb-1">待审核</p>
-                            <p className="text-4xl font-mono font-bold text-yellow-500">{requests.filter(r => r.status === 'PENDING').length}</p>
+                            <p className="text-4xl font-mono font-bold text-yellow-500">{pendingRequests.length}</p>
                         </div>
                         <button
                             onClick={() => setShowPasswordModal(true)}
@@ -249,13 +274,19 @@ export default function AdminDashboard() {
                             <Users className="w-6 h-6" />
                         </span>
                         <div>
-                            <h2 className="text-xl font-bold text-gray-900">申请队列</h2>
+                            <h2 className="text-xl font-bold text-gray-900">未处理申请</h2>
                             <p className="text-[10px] text-gray-300 uppercase tracking-widest">Request Queue</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl border border-gray-100">
                         <Search className="w-4 h-4 text-gray-400" />
-                        <input type="text" placeholder="搜索用户..." className="bg-transparent border-none focus:outline-none text-sm font-bold text-gray-600 w-28" />
+                        <input
+                            type="text"
+                            placeholder="搜索用户..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-transparent border-none focus:outline-none text-sm font-bold text-gray-600 w-28"
+                        />
                     </div>
                 </div>
 
@@ -272,7 +303,7 @@ export default function AdminDashboard() {
                             </tr>
                         </thead>
                         <tbody>
-                            {requests.map((req) => (
+                            {pendingRequestsFiltered.map((req) => (
                                 <tr key={req.id} className="bg-gray-50/50 hover:bg-white hover:shadow-lg hover:shadow-gray-200/50 transition-all group duration-300 transform hover:-translate-y-1">
                                     <td className="px-4 py-5 rounded-l-2xl border border-transparent group-hover:border-gray-100 group-hover:border-r-transparent">
                                         <div className="flex items-center gap-3">
@@ -323,36 +354,32 @@ export default function AdminDashboard() {
                                         <StatusBadge status={req.status} />
                                     </td>
                                     <td className="px-4 py-5 rounded-r-2xl text-right border border-transparent group-hover:border-gray-100 group-hover:border-l-transparent">
-                                        {req.status === 'PENDING' ? (
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleUpdateStatus(req.id, 'APPROVED')}
-                                                    className="p-2 rounded-xl text-green-600 hover:bg-green-50 transition-colors"
-                                                    title="通过"
-                                                >
-                                                    <CheckCircle className="w-6 h-6" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleUpdateStatus(req.id, 'REJECTED')}
-                                                    className="p-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors"
-                                                    title="拒绝"
-                                                >
-                                                    <XCircle className="w-6 h-6" />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <span className="text-gray-300 font-bold text-xs uppercase tracking-wider">已完成</span>
-                                        )}
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button
+                                                onClick={() => handleUpdateStatus(req.id, 'APPROVED')}
+                                                className="p-2 rounded-xl text-green-600 hover:bg-green-50 transition-colors"
+                                                title="通过"
+                                            >
+                                                <CheckCircle className="w-6 h-6" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleUpdateStatus(req.id, 'REJECTED')}
+                                                className="p-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors"
+                                                title="拒绝"
+                                            >
+                                                <XCircle className="w-6 h-6" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
-                            {requests.length === 0 && (
+                            {pendingRequestsFiltered.length === 0 && (
                                 <tr>
                                     <td colSpan="6" className="text-center py-20 text-gray-300 italic">
                                         <div className="flex flex-col items-center gap-4">
                                             <Users className="w-12 h-12 opacity-20" />
                                             <div>
-                                                <p className="font-bold">暂无申请</p>
+                                                <p className="font-bold">暂无未处理申请</p>
                                                 <p className="text-xs opacity-50">Queue is empty</p>
                                             </div>
                                         </div>
@@ -362,6 +389,108 @@ export default function AdminDashboard() {
                         </tbody>
                     </table>
                 </div>
+            </motion.div>
+
+            {/* Processed Requests Section (Collapsed by default) */}
+            <motion.div variants={itemVariants} className="bg-white p-8 rounded-[2.5rem] shadow-bento border border-gray-100">
+                <div className="flex items-center justify-between mb-6 px-2">
+                    <div className="flex items-center gap-3">
+                        <span className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500">
+                            <Users className="w-6 h-6" />
+                        </span>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900">已处理申请</h2>
+                            <p className="text-[10px] text-gray-300 uppercase tracking-widest">Processed</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setShowProcessedRequests(v => !v)}
+                        className="px-4 py-2 rounded-xl bg-gray-50 border border-gray-100 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+                    >
+                        {showProcessedRequests ? '收起' : `查看（${processedRequests.length}）`}
+                    </button>
+                </div>
+
+                {showProcessedRequests && (
+                    <div className="overflow-auto">
+                        <table className="w-full text-left border-separate border-spacing-y-2">
+                            <thead className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                <tr>
+                                    <th className="px-4 py-3 pl-6">申请人</th>
+                                    <th className="px-4 py-3">金额</th>
+                                    <th className="px-4 py-3">用途</th>
+                                    <th className="px-4 py-3">发票</th>
+                                    <th className="px-4 py-3">状态</th>
+                                    <th className="px-4 py-3 text-right pr-6">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {processedRequestsFiltered.map((req) => (
+                                    <tr key={req.id} className="bg-gray-50/50 hover:bg-white hover:shadow-lg hover:shadow-gray-200/50 transition-all group duration-300 transform hover:-translate-y-1">
+                                        <td className="px-4 py-5 rounded-l-2xl border border-transparent group-hover:border-gray-100 group-hover:border-r-transparent">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-200 to-gray-300 flex items-center justify-center text-xs font-bold text-gray-600">
+                                                    {req.user?.username?.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <span className="font-bold text-gray-900">{req.user?.username}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-5 font-mono font-bold text-lg text-gray-900 border-y border-transparent group-hover:border-gray-100">
+                                            ¥{req.amount}
+                                        </td>
+                                        <td className="px-4 py-5 text-sm font-bold text-gray-500 max-w-[180px] truncate border-y border-transparent group-hover:border-gray-100">
+                                            {req.purpose}
+                                        </td>
+                                        <td className="px-4 py-5 border-y border-transparent group-hover:border-gray-100">
+                                            {(() => {
+                                                const urls = Array.isArray(req.invoiceUrls) && req.invoiceUrls.length > 0
+                                                    ? req.invoiceUrls
+                                                    : (req.invoiceUrl ? [req.invoiceUrl] : []);
+
+                                                const hrefs = urls
+                                                    .map(toInvoiceHref)
+                                                    .filter(Boolean);
+
+                                                if (hrefs.length === 0) return <span className="text-gray-300 text-xs font-bold">无</span>;
+
+                                                if (hrefs.length === 1) {
+                                                    return (
+                                                        <a href={hrefs[0]} target="_blank" rel="noreferrer" className="text-xs font-bold text-xjtu-red hover:underline flex items-center gap-1">
+                                                            查看文件
+                                                        </a>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <div className="flex flex-col gap-1">
+                                                        {hrefs.map((href, idx) => (
+                                                            <a key={href + idx} href={href} target="_blank" rel="noreferrer" className="text-xs font-bold text-xjtu-red hover:underline flex items-center gap-1">
+                                                                查看文件{idx + 1}
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
+                                        <td className="px-4 py-5 border-y border-transparent group-hover:border-gray-100">
+                                            <StatusBadge status={req.status} />
+                                        </td>
+                                        <td className="px-4 py-5 rounded-r-2xl text-right border border-transparent group-hover:border-gray-100 group-hover:border-l-transparent">
+                                            <span className="text-gray-300 font-bold text-xs uppercase tracking-wider">已完成</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {processedRequestsFiltered.length === 0 && (
+                                    <tr>
+                                        <td colSpan="6" className="text-center py-10 text-sm font-bold text-gray-400">
+                                            暂无已处理申请
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </motion.div>
 
             {/* Users Section */}
